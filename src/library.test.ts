@@ -27,18 +27,22 @@ describe("issueTitle", () => {
 
 describe("buildIssueUrl", () => {
   it("prefills title, body, labels and assignee", () => {
-    const url = new URL(buildIssueUrl(config, "Broken sort\nClick the score column", "https://app/?tab=x", "Pretzel"));
+    const url = new URL(buildIssueUrl(
+      config,
+      { title: "Broken sort", body: "Broken sort\nClick the score column" },
+      { appName: "Pretzel", pageUrl: "https://app/?tab=x", details: ["branch `main`"] },
+    ));
     expect(url.origin + url.pathname).toBe("https://github.com/commit-capital/startupSourcer/issues/new");
     expect(url.searchParams.get("title")).toBe("Broken sort");
     expect(url.searchParams.get("labels")).toBe("feedback");
     expect(url.searchParams.get("assignees")).toBe("brandonburr");
     const body = url.searchParams.get("body") ?? "";
     expect(body.startsWith("Broken sort\nClick the score column")).toBe(true);
-    expect(body).toContain("Filed from Pretzel · page https://app/?tab=x");
+    expect(body).toContain("Filed from Pretzel · branch `main` · page https://app/?tab=x");
   });
 
   it("omits unset assignee and labels", () => {
-    const url = new URL(buildIssueUrl({ ...config, assignee: null, labels: [] }, "x", "p", "A"));
+    const url = new URL(buildIssueUrl({ ...config, assignee: null, labels: [] }, { title: "x", body: "x" }, { appName: "A", pageUrl: "p", details: [] }));
     expect(url.searchParams.has("assignees")).toBe(false);
     expect(url.searchParams.has("labels")).toBe(false);
   });

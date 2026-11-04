@@ -1,11 +1,18 @@
 import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { configErrors, loadSavedConfig, saveConfig } from "./config.js";
-import { buildIssueUrl } from "./issueUrl.js";
+import { buildIssueUrl, issueTitle } from "./issueUrl.js";
 import { CLAIM_LABEL, PARKED_LABEL, renderRoutinePrompt } from "./routinePrompt.js";
+import { copyPageScreenshot, SCREENSHOT_SKIP_ATTR } from "./screenshot.js";
+import { useSpeechInput } from "./speech.js";
 import { styles } from "./styles.js";
 const DRAFT_KEY = "bugfix-button:draft";
+const MIC_KEY = "bugfix-button:mic";
+const SCREENSHOT_KEY = "bugfix-button:screenshot";
 const DEFAULT_LABEL = "feedback";
+/** Longest wait for `generate` before filing raw. */
+export const GENERATE_TIMEOUT_MS = 12000;
 function detectedRepo() {
     return typeof __BUGFIX_BUTTON_REPO__ === "string" ? __BUGFIX_BUTTON_REPO__ : null;
 }
@@ -19,18 +26,48 @@ function configFromProps(props) {
         labels: props.labels ?? [],
     };
 }
+function readPref(key) {
+    try {
+        return localStorage.getItem(key);
+    }
+    catch {
+        return null;
+    }
+}
+function writePref(key, value) {
+    try {
+        if (value)
+            localStorage.setItem(key, value);
+        else
+            localStorage.removeItem(key);
+    }
+    catch {
+        // Storage blocked; keep state in memory.
+    }
+}
 export function BugfixButton(props) {
     const [open, setOpen] = useState(false);
-    const placement = props.placement ?? "top-right";
-    const buttonStyle = placement === "top-right"
-        ? { ...styles.button, ...styles.floating }
-        : styles.button;
-    return (_jsxs(_Fragment, { children: [_jsx("button", { type: "button", style: buttonStyle, onClick: () => setOpen(true), title: "Report a bug or request a feature", children: "\uD83D\uDC1E Feedback" }), open && _jsx(FeedbackModal, { ...props, onClose: () => setOpen(false) })] }));
+    let buttonStyle;
+    if (!props.buttonClassName) {
+        buttonStyle = (props.placement ?? "top-right") === "top-right"
+            ? { ...styles.button, ...styles.floating }
+            : styles.button;
+    }
+    return (_jsxs(_Fragment, { children: [_jsx("button", { type: "button", className: props.buttonClassName, style: buttonStyle, onClick: () => setOpen(true), title: "Report a bug or request a feature", children: "\uD83D\uDC1E Feedback" }), open && createPortal(_jsx(FeedbackModal, { ...props, onClose: () => setOpen(false) }), document.body)] }));
 }
 function FeedbackModal({ onClose, ...props }) {
     const fixedConfig = configFromProps(props);
     const [config, setConfig] = useState(() => fixedConfig ?? loadSavedConfig());
     const [view, setView] = useState(config ? "file" : "setup");
+    // Dismiss only when the press began on the backdrop.
+    const pressStartedOnOverlay = useRef(false);
+    const handleMouseDown = (e) => {
+        pressStartedOnOverlay.current = e.target === e.currentTarget;
+    };
+    const handleClick = (e) => {
+        if (e.target === e.currentTarget && pressStartedOnOverlay.current)
+            onClose();
+    };
     const handleKeyDown = (e) => {
         if (e.key === "Escape")
             onClose();
@@ -47,48 +84,97 @@ function FeedbackModal({ onClose, ...props }) {
         body = (_jsx(RoutineView, { config: config, editable: fixedConfig === null, onEdit: () => setView("setup"), onDone: () => setView("file") }));
     }
     else {
-        body = (_jsx(FileView, { config: config, appName: props.appName ?? document.title, onSettings: () => setView("routine"), onClose: onClose }));
+        body = _jsx(FileView, { ...props, config: config, onSettings: () => setView("routine"), onClose: onClose });
     }
-    return (_jsx("div", { style: styles.overlay, onKeyDown: handleKeyDown, children: _jsxs("div", { style: styles.modal, role: "dialog", "aria-modal": "true", "aria-label": "File a bug or feature request", children: [_jsxs("div", { style: styles.modalHeader, children: [_jsxs("span", { children: ["\uD83D\uDC1E ", view === "file" ? "File a bug or request" : "Set up the bug button"] }), _jsx("button", { type: "button", style: styles.close, onClick: onClose, "aria-label": "Close", children: "\u2715" })] }), body] }) }));
+    return (_jsx("div", { style: styles.overlay, [SCREENSHOT_SKIP_ATTR]: "", onMouseDown: handleMouseDown, onClick: handleClick, onKeyDown: handleKeyDown, children: _jsxs("div", { style: styles.modal, role: "dialog", "aria-modal": "true", "aria-label": "File a bug or feature request", children: [_jsxs("div", { style: styles.modalHeader, children: [_jsxs("span", { children: ["\uD83D\uDC1E ", view === "file" ? "File a bug or request" : "Set up the bug button"] }), _jsx("button", { type: "button", style: styles.close, onClick: onClose, "aria-label": "Close", children: "\u2715" })] }), body] }) }));
 }
-function readDraft() {
-    try {
-        return localStorage.getItem(DRAFT_KEY) ?? "";
-    }
-    catch {
-        return "";
-    }
+function MicIcon() {
+    return (_jsx("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true", children: _jsx("path", { d: "M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" }) }));
 }
-function writeDraft(text) {
-    try {
-        if (text)
-            localStorage.setItem(DRAFT_KEY, text);
-        else
-            localStorage.removeItem(DRAFT_KEY);
-    }
-    catch {
-        // Storage blocked; keep draft in memory.
-    }
+function withTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => reject(new Error("timed out")), ms);
+        promise.then((value) => { window.clearTimeout(timer); resolve(value); }, (error) => { window.clearTimeout(timer); reject(error); });
+    });
 }
-function FileView({ config, appName, onSettings, onClose }) {
-    const [description, setDescription] = useState(readDraft);
-    const updateDescription = (text) => {
-        setDescription(text);
-        writeDraft(text);
+function FileView({ config, appName, details, generate, onSettings, onClose }) {
+    const [description, setDescription] = useState(() => readPref(DRAFT_KEY) ?? "");
+    const [phase, setPhase] = useState(null);
+    const [screenshot, setScreenshot] = useState(() => readPref(SCREENSHOT_KEY) !== "false");
+    const [clipOk, setClipOk] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const speech = useSpeechInput((text) => setDescription((prev) => (prev ? `${prev} ${text}` : text)), readPref(MIC_KEY) === "true");
+    const busy = phase !== null;
+    useEffect(() => { writePref(MIC_KEY, String(speech.active)); }, [speech.active]);
+    useEffect(() => { writePref(DRAFT_KEY, description); }, [description]);
+    const toggleScreenshot = () => {
+        setScreenshot(!screenshot);
+        writePref(SCREENSHOT_KEY, String(!screenshot));
     };
-    const openIssue = () => {
-        if (!description.trim())
+    const openIssue = async () => {
+        const raw = description.trim();
+        if (!raw || busy)
             return;
-        const url = buildIssueUrl(config, description, window.location.href, appName);
-        window.open(url, "_blank", "noopener,noreferrer");
-        writeDraft("");
-        onClose();
+        // Open inside the click so popup blockers allow it.
+        const tab = window.open("", "_blank");
+        if (tab)
+            tab.opener = null;
+        speech.stop();
+        setClipOk(null);
+        setPreview(null);
+        let copied = false;
+        if (screenshot) {
+            setPhase("screenshot");
+            const shot = await copyPageScreenshot();
+            copied = shot.copied;
+            setClipOk(shot.copied);
+            setPreview(shot.preview);
+        }
+        let issue = { title: issueTitle(raw), body: raw };
+        if (generate) {
+            setPhase("generating");
+            try {
+                const result = await withTimeout(generate(raw), GENERATE_TIMEOUT_MS);
+                issue = { title: result.title || issue.title, body: result.body || issue.body };
+            }
+            catch {
+                // File the raw description.
+            }
+        }
+        const url = buildIssueUrl(config, issue, {
+            appName: appName ?? document.title,
+            pageUrl: window.location.href,
+            details: details ?? [],
+        });
+        if (tab)
+            tab.location.href = url;
+        else
+            window.open(url, "_blank", "noopener,noreferrer");
+        setDescription("");
+        setPhase(null);
+        // Stay open so a failed copy can be done by hand.
+        if (!screenshot || copied)
+            onClose();
     };
     const handleKeyDown = (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === "Enter")
-            openIssue();
+            void openIssue();
     };
-    return (_jsxs(_Fragment, { children: [_jsx("textarea", { style: styles.textarea, placeholder: "Describe the bug or request. The first line becomes the issue title.", value: description, onChange: (e) => updateDescription(e.target.value), onKeyDown: handleKeyDown, rows: 7, autoFocus: true }), _jsxs("div", { style: styles.footer, children: [_jsxs("button", { type: "button", style: styles.linkButton, onClick: onSettings, children: ["\u2699 ", config.repo] }), _jsxs("div", { style: styles.actions, children: [_jsx("button", { type: "button", style: styles.secondary, onClick: onClose, children: "Cancel" }), _jsx("button", { type: "button", style: styles.primary, onClick: openIssue, disabled: !description.trim(), children: "Open Issue \u2192" })] })] }), _jsx("span", { style: styles.hint, children: "\u2318\u21B5 to open \u00B7 paste screenshots into the GitHub issue" })] }));
+    let hint = "⌘↵ to open";
+    if (phase === "screenshot")
+        hint = "Taking screenshot…";
+    else if (phase === "generating")
+        hint = "Writing the issue…";
+    else if (clipOk)
+        hint = "📸 Screenshot copied; paste it into the issue";
+    else if (clipOk === false && !preview)
+        hint = "⚠️ Screenshot copy failed";
+    if (preview) {
+        return (_jsxs(_Fragment, { children: [_jsx("span", { style: styles.hint, children: "Couldn't copy the screenshot. Right-click it to copy:" }), _jsx("img", { src: preview, alt: "Page screenshot", style: styles.preview }), _jsxs("div", { style: styles.footer, children: [_jsx("span", {}), _jsx("button", { type: "button", style: styles.primary, onClick: onClose, children: "Done" })] })] }));
+    }
+    return (_jsxs(_Fragment, { children: [_jsxs("div", { style: styles.textareaWrap, children: [_jsx("textarea", { style: styles.textarea, placeholder: generate
+                            ? "Describe the bug or request. Claude writes the title and formats the issue."
+                            : "Describe the bug or request. The first line becomes the issue title.", value: description, onChange: (e) => setDescription(e.target.value), onKeyDown: handleKeyDown, rows: 7, autoFocus: true, disabled: busy }), speech.supported && (_jsx("button", { type: "button", style: speech.active ? { ...styles.mic, ...styles.micActive } : styles.mic, onClick: speech.toggle, title: speech.active ? "Stop voice input" : "Start voice input", "aria-label": speech.active ? "Stop voice input" : "Start voice input", disabled: busy, children: _jsx(MicIcon, {}) }))] }), speech.error && _jsxs("span", { style: { ...styles.hint, ...styles.errors }, children: ["Mic error: ", speech.error] }), _jsxs("label", { style: styles.option, children: [_jsx("input", { type: "checkbox", checked: screenshot, onChange: toggleScreenshot, disabled: busy }), "Copy a screenshot to the clipboard"] }), _jsxs("div", { style: styles.footer, children: [_jsxs("button", { type: "button", style: styles.linkButton, onClick: onSettings, children: ["\u2699 ", config.repo] }), _jsxs("div", { style: styles.actions, children: [_jsx("button", { type: "button", style: styles.secondary, onClick: onClose, disabled: busy, children: "Cancel" }), _jsx("button", { type: "button", style: styles.primary, onClick: () => void openIssue(), disabled: !description.trim() || busy, children: busy ? "Opening…" : "Open Issue →" })] })] }), _jsx("span", { style: styles.hint, children: hint })] }));
 }
 function SetupView({ initial, onSave }) {
     const [repo, setRepo] = useState(initial?.repo ?? detectedRepo() ?? "");

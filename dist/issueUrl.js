@@ -7,10 +7,11 @@ export function issueTitle(description) {
     return `${firstLine.slice(0, TITLE_MAX - 1).trimEnd()}…`;
 }
 /** Prefilled GitHub new-issue URL. */
-export function buildIssueUrl(config, description, pageUrl, appName) {
+export function buildIssueUrl(config, issue, context) {
+    const where = [...context.details, context.pageUrl && `page ${context.pageUrl}`].filter(Boolean).join(" · ");
     const params = new URLSearchParams({
-        title: issueTitle(description),
-        body: `${description.trim()}\n\n---\n<sub>🐞 Filed from ${appName} · page ${pageUrl}</sub>`,
+        title: issue.title,
+        body: `${issue.body.trim()}\n\n---\n<sub>🐞 Filed from ${context.appName} · ${where}</sub>`,
     });
     if (config.labels.length > 0)
         params.set("labels", config.labels.join(","));
