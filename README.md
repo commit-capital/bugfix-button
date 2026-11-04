@@ -1,0 +1,89 @@
+# bugfix-button
+
+A 🐞 Feedback button for any React app. Click it, describe the bug, and it
+opens a prefilled GitHub issue (one more click files it). A Claude Code routine
+([ROUTINE.md](ROUTINE.md)) then picks the issue up, fixes it, opens a PR, and
+drives it to a squash-merge.
+
+## Install
+
+```bash
+pnpm add github:commit-capital/bugfix-button#v0.1.0
+```
+
+The package builds itself on install (`prepare`). React 18+ is a peer
+dependency.
+
+## Use
+
+Drop it anywhere. By default it floats in the top-right corner:
+
+```tsx
+import { BugfixButton } from "@commit-capital/bugfix-button";
+
+<BugfixButton
+  repo="commit-capital/startupSourcer"
+  filedBy="brandonburr"
+  assignee="brandonburr"
+  labels={["feedback"]}
+  appName="Pretzel"
+/>
+```
+
+Or put it in your own header with `placement="inline"`.
+
+| Prop | Meaning |
+|------|---------|
+| `repo` | `owner/name` to file in. Omit it to set up in the browser. |
+| `filedBy` | Routine rule: fix only issues this login filed. |
+| `assignee` | Prefilled assignee. The routine fixes only issues assigned to them. |
+| `labels` | Prefilled labels. The routine fixes only issues with the first one. |
+| `appName` | Shown in the issue footer. Defaults to `document.title`. |
+| `placement` | `"top-right"` (default, floating) or `"inline"`. |
+
+Set at least one of `filedBy` or `assignee`, so a stranger's issue is never
+auto-fixed. On a public repository always set `filedBy`.
+
+### Set up in the browser
+
+Leave out `repo` and the first click opens a short setup: which repository to
+file in and which rules the auto-fixer uses (filed by, assigned to, label). It
+saves the answers in that browser and shows the routine prompt, filled in,
+with a Copy button. Click the ⚙ link in the dialog to see it again.
+
+To prefill the repository from your git remote, add the Vite plugin:
+
+```ts
+// vite.config.ts
+import { bugfixButton } from "@commit-capital/bugfix-button/vite";
+
+export default defineConfig({ plugins: [react(), bugfixButton()] });
+```
+
+Browser setup is per browser. Once the rules are right, put them in props so
+every teammate gets the same config.
+
+## The auto-fix routine
+
+1. Create the labels `feedback`, `fix-in-progress` and
+   `awaiting-human-response` in the target repository.
+2. Get the prompt: the ⚙ view in the dialog, or
+   `pnpm run routine -- --repo owner/name --filed-by you --assignee you --label feedback`.
+3. In Claude Code on the web, create a routine with the target repository
+   attached, paste the prompt, turn on push notifications, and add a GitHub
+   trigger for **issue opened** on that repository.
+
+[ROUTINE.md](ROUTINE.md) has the generic template and how the claim lock,
+parking, and trust rules work.
+
+## Develop
+
+```bash
+pnpm install
+pnpm test
+pnpm run typecheck
+pnpm run build && pnpm run routine -- --doc   # regenerate ROUTINE.md
+```
+
+`ROUTINE.md` is generated from `src/routinePrompt.ts`; a test fails when they
+drift.
