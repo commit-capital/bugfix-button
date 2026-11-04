@@ -1,6 +1,6 @@
 {
   "name": "@commit-capital/bugfix-button",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A drop-in Feedback button that files GitHub issues, plus a Claude routine that fixes them.",
   "license": "MIT",
   "repository": {
@@ -29,6 +29,9 @@
     "routine": "node scripts/render-routine.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "html2canvas-pro": "2.6.0"
   },
   "peerDependencies": {
     "react": ">=18",

@@ -39,7 +39,25 @@ Or put it in your own header with `placement="inline"`.
 | `assignee` | Prefilled assignee. The routine fixes only issues assigned to them. |
 | `labels` | Prefilled labels. The routine fixes only issues with the first one. |
 | `appName` | Shown in the issue footer. Defaults to `document.title`. |
+| `details` | Extra footer facts, such as ``["branch `main`"]``. |
+| `generate` | `(description) => Promise<{ title, body }>`: have your backend (or an LLM) write the issue. Falls back to the raw text after 12 s or on error. |
 | `placement` | `"top-right"` (default, floating) or `"inline"`. |
+| `buttonClassName` | Your own class for the button; drops its built-in styles. |
+
+The dialog has dictation (Web Speech, where the browser supports it), copies
+a page screenshot to the clipboard to paste into the issue, keeps the draft
+across dismissals, and renders under `document.body` so no header stacking
+context can hide it.
+
+### Theme
+
+Set any of these CSS variables on `:root` (or a parent) to match your app:
+`--bugfix-bg`, `--bugfix-fg`, `--bugfix-muted`, `--bugfix-border`,
+`--bugfix-accent`, `--bugfix-danger`, `--bugfix-field-bg`, `--bugfix-font`.
+
+```css
+:root { --bugfix-bg: var(--panel); --bugfix-fg: var(--text); --bugfix-accent: var(--accent); }
+```
 
 Set at least one of `filedBy` or `assignee`, so a stranger's issue is never
 auto-fixed. On a public repository always set `filedBy`.
