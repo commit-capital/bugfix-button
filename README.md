@@ -8,11 +8,11 @@ drives it to a squash-merge.
 ## Install
 
 ```bash
-pnpm add github:commit-capital/bugfix-button#v0.1.0
+pnpm add github:commit-capital/bugfix-button#<commit-sha>
 ```
 
-The package builds itself on install (`prepare`). React 18+ is a peer
-dependency.
+Pin a commit. The built `dist/` is committed, so installs run no scripts.
+React 18+ is a peer dependency.
 
 ## Use
 
@@ -82,8 +82,11 @@ parking, and trust rules work.
 pnpm install
 pnpm test
 pnpm run typecheck
-pnpm run build && pnpm run routine -- --doc   # regenerate ROUTINE.md
+pnpm run build                    # commit dist/ with your change
+pnpm run routine -- --doc         # regenerate ROUTINE.md
 ```
+
+CI fails when `dist/` or `ROUTINE.md` is stale.
 
 `ROUTINE.md` is generated from `src/routinePrompt.ts`; a test fails when they
 drift.

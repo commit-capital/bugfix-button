@@ -18,3 +18,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
       - run: pnpm test
+      - name: Check committed dist is current
+        run: pnpm run build && git diff --exit-code dist

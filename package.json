@@ -26,7 +26,6 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "prepare": "tsc -p tsconfig.build.json",
     "routine": "node scripts/render-routine.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
