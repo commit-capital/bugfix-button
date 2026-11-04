@@ -2,11 +2,15 @@
   "name": "@commit-capital/bugfix-button",
   "version": "0.1.0",
   "description": "A drop-in Feedback button that files GitHub issues, plus a Claude routine that fixes them.",
-  "license": "UNLICENSED",
-  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/commit-capital/bugfix-button.git"
+  },
   "type": "module",
   "packageManager": "pnpm@12.4.1",
   "files": [
+    "LICENSE",
     "dist",
     "ROUTINE.md"
   ],
