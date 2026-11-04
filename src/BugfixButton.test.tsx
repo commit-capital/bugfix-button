@@ -94,6 +94,8 @@ describe("BugfixButton", () => {
 
     const prompt = screen.getByDisplayValue(/Fix issues filed through the Feedback button on acme\/app/);
     expect((prompt as HTMLTextAreaElement).value).toContain("author:dev");
+    expect((prompt as HTMLTextAreaElement).value).not.toContain(" label:");
+    expect(screen.queryByText(/Create the label/)).toBeNull();
 
     fireEvent.click(screen.getByText("Done"));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "Crash" } });

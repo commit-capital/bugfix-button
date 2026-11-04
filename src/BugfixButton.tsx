@@ -5,7 +5,7 @@ import { configErrors, loadSavedConfig, saveConfig } from "./config.js";
 import type { FeedbackConfig } from "./config.js";
 import { buildIssueUrl, issueTitle } from "./issueUrl.js";
 import type { IssueDraft } from "./issueUrl.js";
-import { CLAIM_LABEL, PARKED_LABEL, renderRoutinePrompt } from "./routinePrompt.js";
+import { renderRoutinePrompt } from "./routinePrompt.js";
 import { copyPageScreenshot, SCREENSHOT_SKIP_ATTR } from "./screenshot.js";
 import { useSpeechInput } from "./speech.js";
 import { styles } from "./styles.js";
@@ -16,8 +16,6 @@ declare const __BUGFIX_BUTTON_REPO__: string | null | undefined;
 const DRAFT_KEY = "bugfix-button:draft";
 const MIC_KEY = "bugfix-button:mic";
 const SCREENSHOT_KEY = "bugfix-button:screenshot";
-const DEFAULT_LABEL = "feedback";
-
 /** Longest wait for `generate` before filing raw. */
 export const GENERATE_TIMEOUT_MS = 12000;
 
@@ -339,7 +337,7 @@ function SetupView({ initial, onSave }: SetupViewProps) {
   const [repo, setRepo] = useState(initial?.repo ?? detectedRepo() ?? "");
   const [filedBy, setFiledBy] = useState(initial?.filedBy ?? "");
   const [assignee, setAssignee] = useState(initial?.assignee ?? "");
-  const [label, setLabel] = useState(initial ? (initial.labels[0] ?? "") : DEFAULT_LABEL);
+  const [label, setLabel] = useState(initial?.labels[0] ?? "");
 
   const draft: FeedbackConfig = {
     repo: repo.trim(),
@@ -391,7 +389,7 @@ interface RoutineViewProps {
 function RoutineView({ config, editable, onEdit, onDone }: RoutineViewProps) {
   const [copied, setCopied] = useState(false);
   const prompt = renderRoutinePrompt(config);
-  const labels = [...config.labels.slice(0, 1), CLAIM_LABEL, PARKED_LABEL];
+  const label = config.labels[0];
 
   const copy = async () => {
     try {
@@ -405,10 +403,13 @@ function RoutineView({ config, editable, onEdit, onDone }: RoutineViewProps) {
   return (
     <>
       <ol style={styles.steps}>
-        <li>
-          Create labels {labels.map((l, i) => <span key={l}>{i > 0 && ", "}<code>{l}</code></span>)} in{" "}
-          <a href={`https://github.com/${config.repo}/labels`} target="_blank" rel="noreferrer">{config.repo}</a>.
-        </li>
+        {label && (
+          <li>
+            Create the label <code>{label}</code> in{" "}
+            <a href={`https://github.com/${config.repo}/labels`} target="_blank" rel="noreferrer">{config.repo}</a>.
+            GitHub drops a missing label from the issue link.
+          </li>
+        )}
         <li>
           In <a href="https://claude.ai/code" target="_blank" rel="noreferrer">Claude Code</a>, create a routine
           on <code>{config.repo}</code>, paste the prompt below, and trigger it on the GitHub event

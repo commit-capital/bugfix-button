@@ -15,8 +15,11 @@ pnpm run routine -- --repo owner/name --filed-by you --assignee you --label feed
 
 ## Set it up
 
-1. In the target repository, create the labels \`feedback\` (or your label),
-   \`fix-in-progress\` and \`awaiting-human-response\`.
+1. If you use a label rule, create that label in the target repository.
+   GitHub silently drops a missing label from the new-issue link, so the
+   issue would arrive unlabeled and out of scope. The routine's own labels,
+   \`fix-in-progress\` and \`awaiting-human-response\`, are created the first
+   time it sets them.
 2. In Claude Code on the web, create a routine with the target repository
    attached and push notifications on.
 3. Paste the prompt below with your values in place of \`OWNER/REPO\`,

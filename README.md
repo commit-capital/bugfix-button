@@ -25,7 +25,6 @@ import { BugfixButton } from "@commit-capital/bugfix-button";
   repo="commit-capital/startupSourcer"
   filedBy="brandonburr"
   assignee="brandonburr"
-  labels={["feedback"]}
   appName="Pretzel"
 />
 ```
@@ -83,8 +82,9 @@ every teammate gets the same config.
 
 ## The auto-fix routine
 
-1. Create the labels `feedback`, `fix-in-progress` and
-   `awaiting-human-response` in the target repository.
+1. If you set `labels`, create the first one in the target repository;
+   GitHub drops a missing label from the issue link. The routine's own
+   labels create themselves.
 2. Get the prompt: the ⚙ view in the dialog, or
    `pnpm run routine -- --repo owner/name --filed-by you --assignee you --label feedback`.
 3. In Claude Code on the web, create a routine with the target repository
