@@ -167,7 +167,7 @@ importers:
   .:
     dependencies:
       html2canvas-pro:
-        specifier: 2.6.0
+        specifier: ^2.5.2
         version: 2.6.0
     devDependencies:
       '@testing-library/react':
