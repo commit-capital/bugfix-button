@@ -144,6 +144,21 @@ describe("BugfixButton", () => {
     expect(prompt()).toContain("author:andy");
   });
 
+  it("shows the setup the Vite plugin wrote into the page", () => {
+    const page = globalThis as Record<string, unknown>;
+    page.__BUGFIX_BUTTON__ = {
+      repo: "acme/app",
+      setup: { setupScript: ["npm install -g pnpm@12.4.1"], allowDomains: ["codeload.github.com"], attachRepos: [], checks: [], notes: [] },
+    };
+    try {
+      render(<BugfixButton assignee="dev" />);
+      fireEvent.click(screen.getByText("🐞 File a Bug"));
+      expect((screen.getByPlaceholderText("owner/name") as HTMLInputElement).value).toBe("acme/app");
+    } finally {
+      delete page.__BUGFIX_BUTTON__;
+    }
+  });
+
   it("points to the setup command when the repo wasn't inspected", () => {
     render(<BugfixButton repo="acme/app" assignee="dev" />);
     fireEvent.click(screen.getByText("🐞 File a Bug"));

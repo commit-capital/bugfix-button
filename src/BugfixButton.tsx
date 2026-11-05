@@ -13,9 +13,11 @@ import type { RepoSetup } from "./setupKit.js";
 import { useSpeechInput } from "./speech.js";
 import { styles } from "./styles.js";
 
-// Injected by the Vite plugin.
-declare const __BUGFIX_BUTTON_REPO__: string | null | undefined;
-declare const __BUGFIX_BUTTON_SETUP__: RepoSetup | null | undefined;
+// Written into the page by the Vite plugin.
+function pageInfo(): { repo?: unknown; setup?: unknown } {
+  const info: unknown = (globalThis as Record<string, unknown>).__BUGFIX_BUTTON__;
+  return typeof info === "object" && info !== null ? info : {};
+}
 
 const DRAFT_KEY = "bugfix-button:draft";
 const MIC_KEY = "bugfix-button:mic";
@@ -47,7 +49,8 @@ export interface BugfixButtonProps {
 type View = "file" | "setup" | "routine";
 
 function detectedRepo(): string | null {
-  return typeof __BUGFIX_BUTTON_REPO__ === "string" ? __BUGFIX_BUTTON_REPO__ : null;
+  const { repo } = pageInfo();
+  return typeof repo === "string" ? repo : null;
 }
 
 function configFromProps(props: BugfixButtonProps): FeedbackConfig | null {
@@ -425,7 +428,8 @@ function loadRules(config: FeedbackConfig): RoutineRules {
 }
 
 function detectedSetup(): RepoSetup | null {
-  return typeof __BUGFIX_BUTTON_SETUP__ === "object" ? __BUGFIX_BUTTON_SETUP__ ?? null : null;
+  const { setup } = pageInfo();
+  return typeof setup === "object" && setup !== null ? (setup as RepoSetup) : null;
 }
 
 function CopyButton({ text, label }: { text: string; label: string }) {

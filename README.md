@@ -10,7 +10,7 @@ prefilled GitHub issue to file in one click. An AI agent task
 pnpm add github:commit-capital/bugfix-button
 ```
 
-Add `#v0.3.0` to the end to pin a release. React 18+ is required.
+Add `#v0.3.1` to the end to pin a release. React 18+ is required.
 
 ## Use
 

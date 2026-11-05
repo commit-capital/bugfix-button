@@ -63,3 +63,19 @@ describe("inspectRepo", () => {
     expect(renderSetupKit(setup)).not.toContain("Setup script");
   });
 });
+
+describe("bugfixButton Vite plugin", () => {
+  it("writes the repo and, in dev, the setup into the page", async () => {
+    const { bugfixButton } = await import("./vite.js");
+    const plugin = bugfixButton();
+    plugin.configResolved({ command: "serve" });
+    const [tag] = plugin.transformIndexHtml();
+    expect(tag.children.startsWith("window.__BUGFIX_BUTTON__=")).toBe(true);
+    const info = JSON.parse(tag.children.slice("window.__BUGFIX_BUTTON__=".length, -1));
+    expect(info.setup.allowDomains).toContain("private-user-images.githubusercontent.com");
+
+    const build = bugfixButton();
+    build.configResolved({ command: "build" });
+    expect(JSON.parse(build.transformIndexHtml()[0].children.slice(25, -1)).setup).toBeNull();
+  });
+});
