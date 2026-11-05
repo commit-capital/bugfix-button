@@ -138,8 +138,12 @@ Never weaken, skip, or delete a test or check to make it pass. Never change
 branch protection or rulesets.
 
 Before pushing, run every test, lint, typecheck, and build command the
-repository's instructions and CI workflows name. If you cannot run them, do NOT
-merge: release the claim with the reason.
+repository's instructions and CI workflows name. A sandbox reaches only the
+GitHub repositories attached to it, so if installing dependencies fails on a
+GitHub-hosted package (for example a 403 from codeload.github.com), attach that
+package's repository with mcp__claude-code-remote__add_repo (read access) and
+install again. If you still cannot run the checks, do NOT merge: release the
+claim with the reason.
 
 Commit in one call, then \`git push origin claude/issue-N\` as a command of its
 own. Never push to any other branch. Work on one issue at a time; to find more
