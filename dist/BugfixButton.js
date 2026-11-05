@@ -8,13 +8,19 @@ import { copyPageScreenshot, SCREENSHOT_SKIP_ATTR } from "./screenshot.js";
 import { renderSetupKit, SETUP_COMMAND } from "./setupKit.js";
 import { useSpeechInput } from "./speech.js";
 import { styles } from "./styles.js";
+// Written into the page by the Vite plugin.
+function pageInfo() {
+    const info = globalThis.__BUGFIX_BUTTON__;
+    return typeof info === "object" && info !== null ? info : {};
+}
 const DRAFT_KEY = "bugfix-button:draft";
 const MIC_KEY = "bugfix-button:mic";
 const SCREENSHOT_KEY = "bugfix-button:screenshot";
 /** Longest wait for `generate` before filing raw. */
 export const GENERATE_TIMEOUT_MS = 12000;
 function detectedRepo() {
-    return typeof __BUGFIX_BUTTON_REPO__ === "string" ? __BUGFIX_BUTTON_REPO__ : null;
+    const { repo } = pageInfo();
+    return typeof repo === "string" ? repo : null;
 }
 function configFromProps(props) {
     if (!props.repo)
@@ -213,7 +219,8 @@ function loadRules(config) {
     }
 }
 function detectedSetup() {
-    return typeof __BUGFIX_BUTTON_SETUP__ === "object" ? __BUGFIX_BUTTON_SETUP__ ?? null : null;
+    const { setup } = pageInfo();
+    return typeof setup === "object" && setup !== null ? setup : null;
 }
 function CopyButton({ text, label }) {
     const [copied, setCopied] = useState(false);

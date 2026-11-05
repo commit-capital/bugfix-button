@@ -1,6 +1,6 @@
 {
   "name": "@commit-capital/bugfix-button",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A drop-in Feedback button that files GitHub issues, plus a Claude routine that fixes them.",
   "license": "MIT",
   "repository": {

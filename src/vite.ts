@@ -3,10 +3,20 @@ import { repoFromRemote } from "./config.js";
 import { inspectRepo } from "./setup.js";
 import type { RepoSetup } from "./setupKit.js";
 
+/** Global the plugin writes into the page for the button. */
+export const PAGE_GLOBAL = "__BUGFIX_BUTTON__";
+
+/** What the plugin tells the button about the repository. */
+export interface PageInfo {
+  repo: string | null;
+  setup: RepoSetup | null;
+}
+
 /** Minimal Vite plugin shape, so Vite stays optional. */
 export interface BugfixButtonVitePlugin {
   name: string;
-  config: (config: unknown, env: { command: string }) => { define: Record<string, string> };
+  configResolved: (config: { command: string }) => void;
+  transformIndexHtml: () => { tag: string; children: string; injectTo: "head" }[];
 }
 
 function git(args: string[]): string | null {
@@ -17,23 +27,24 @@ function git(args: string[]): string | null {
   }
 }
 
-/** Detect the GitHub repo, and in dev its agent setup. */
+/** Tell the button its repo and, in dev, its agent setup. */
 export function bugfixButton(): BugfixButtonVitePlugin {
+  let command = "build";
   return {
     name: "bugfix-button",
-    config(_config, env) {
+    configResolved(config) {
+      command = config.command;
+    },
+    // A page script reaches pre-bundled deps; a define would not.
+    transformIndexHtml() {
       const remote = git(["remote", "get-url", "origin"]);
-      const repo = remote ? repoFromRemote(remote) : null;
-      // Dev only, so production bundles skip it.
-      let setup: RepoSetup | null = null;
-      const root = env.command === "serve" ? git(["rev-parse", "--show-toplevel"]) : null;
-      if (root) setup = inspectRepo(root);
-      return {
-        define: {
-          __BUGFIX_BUTTON_REPO__: JSON.stringify(repo),
-          __BUGFIX_BUTTON_SETUP__: JSON.stringify(setup),
-        },
+      const root = command === "serve" ? git(["rev-parse", "--show-toplevel"]) : null;
+      const info: PageInfo = {
+        repo: remote ? repoFromRemote(remote) : null,
+        setup: root ? inspectRepo(root) : null,
       };
+      const json = JSON.stringify(info).replace(/</g, "\\u003c");
+      return [{ tag: "script", children: `window.${PAGE_GLOBAL}=${json};`, injectTo: "head" }];
     },
   };
 }
