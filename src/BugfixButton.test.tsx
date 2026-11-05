@@ -21,7 +21,7 @@ describe("BugfixButton", () => {
   it("opens a prefilled issue when configured by props", async () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     render(<BugfixButton repo="acme/app" assignee="dev" labels={["feedback"]} appName="App" details={["branch `x`"]} />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "Login fails" } });
     await act(async () => { fireEvent.click(screen.getByText("Open Issue →")); });
     const url = lastOpenedUrl(open);
@@ -36,7 +36,7 @@ describe("BugfixButton", () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     const generate = vi.fn().mockResolvedValue({ title: "Login button ignores clicks", body: "## Steps\n1. Click" });
     render(<BugfixButton repo="acme/app" assignee="dev" generate={generate} />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "login broke" } });
     await act(async () => { fireEvent.click(screen.getByText("Open Issue →")); });
     expect(generate).toHaveBeenCalledWith("login broke");
@@ -49,7 +49,7 @@ describe("BugfixButton", () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     const generate = vi.fn().mockRejectedValue(new Error("down"));
     render(<BugfixButton repo="acme/app" assignee="dev" generate={generate} />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "login broke" } });
     await act(async () => { fireEvent.click(screen.getByText("Open Issue →")); });
     expect(lastOpenedUrl(open).searchParams.get("title")).toBe("login broke");
@@ -57,7 +57,7 @@ describe("BugfixButton", () => {
 
   it("renders the dialog under document.body", () => {
     const { container } = render(<BugfixButton repo="acme/app" assignee="dev" placement="inline" />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     const dialog = screen.getByRole("dialog");
     expect(container.contains(dialog)).toBe(false);
     expect(document.body.contains(dialog)).toBe(true);
@@ -65,7 +65,7 @@ describe("BugfixButton", () => {
 
   it("stays open when a drag from inside ends on the backdrop", () => {
     render(<BugfixButton repo="acme/app" assignee="dev" />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     const overlay = screen.getByRole("dialog").parentElement as HTMLElement;
     fireEvent.mouseDown(screen.getByRole("textbox"));
     fireEvent.click(overlay);
@@ -77,22 +77,22 @@ describe("BugfixButton", () => {
 
   it("keeps the draft across dismissals", () => {
     render(<BugfixButton repo="acme/app" assignee="dev" />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "half a thought" } });
     fireEvent.click(screen.getByText("Cancel"));
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("half a thought");
   });
 
   it("onboards, shows the routine, then files", async () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     render(<BugfixButton />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     fireEvent.change(screen.getByPlaceholderText("owner/name"), { target: { value: "acme/app" } });
     fireEvent.change(screen.getAllByPlaceholderText("anyone")[0], { target: { value: "dev" } });
     fireEvent.click(screen.getByText("Save →"));
 
-    const prompt = screen.getByDisplayValue(/Fix issues filed through the Feedback button on acme\/app/);
+    const prompt = screen.getByDisplayValue(/Fix issues filed through the File a Bug button on acme\/app/);
     expect((prompt as HTMLTextAreaElement).value).toContain("author:dev");
     expect((prompt as HTMLTextAreaElement).value).not.toContain(" label:");
     expect(screen.queryByText(/Create the label/)).toBeNull();
@@ -105,28 +105,28 @@ describe("BugfixButton", () => {
 
   it("remembers onboarding across reloads", () => {
     render(<BugfixButton />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     fireEvent.change(screen.getByPlaceholderText("owner/name"), { target: { value: "acme/app" } });
     fireEvent.change(screen.getAllByPlaceholderText("anyone")[1], { target: { value: "dev" } });
     fireEvent.click(screen.getByText("Save →"));
     cleanup();
 
     render(<BugfixButton />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     expect(screen.getByText("Open Issue →")).toBeTruthy();
   });
 
   it("shows no routine prompt for props without a rule", () => {
     render(<BugfixButton repo="acme/app" />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
-    fireEvent.click(screen.getByText("⚙ acme/app"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
+    fireEvent.click(screen.getByTitle("Repository and auto-fix settings"));
     expect(screen.queryByText("Copy prompt")).toBeNull();
     expect(screen.getByText(/Set a filer or an assignee/)).toBeTruthy();
   });
 
   it("blocks saving rules that match anyone", () => {
     render(<BugfixButton />);
-    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
     fireEvent.change(screen.getByPlaceholderText("owner/name"), { target: { value: "acme/app" } });
     expect((screen.getByText("Save →") as HTMLButtonElement).disabled).toBe(true);
   });
