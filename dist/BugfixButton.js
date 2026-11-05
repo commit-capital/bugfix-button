@@ -3,14 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { configErrors, loadSavedConfig, saveConfig } from "./config.js";
 import { buildIssueUrl, issueTitle } from "./issueUrl.js";
-import { CLAIM_LABEL, PARKED_LABEL, renderRoutinePrompt } from "./routinePrompt.js";
+import { renderRoutinePrompt } from "./routinePrompt.js";
 import { copyPageScreenshot, SCREENSHOT_SKIP_ATTR } from "./screenshot.js";
 import { useSpeechInput } from "./speech.js";
 import { styles } from "./styles.js";
 const DRAFT_KEY = "bugfix-button:draft";
 const MIC_KEY = "bugfix-button:mic";
 const SCREENSHOT_KEY = "bugfix-button:screenshot";
-const DEFAULT_LABEL = "feedback";
 /** Longest wait for `generate` before filing raw. */
 export const GENERATE_TIMEOUT_MS = 12000;
 function detectedRepo() {
@@ -180,7 +179,7 @@ function SetupView({ initial, onSave }) {
     const [repo, setRepo] = useState(initial?.repo ?? detectedRepo() ?? "");
     const [filedBy, setFiledBy] = useState(initial?.filedBy ?? "");
     const [assignee, setAssignee] = useState(initial?.assignee ?? "");
-    const [label, setLabel] = useState(initial ? (initial.labels[0] ?? "") : DEFAULT_LABEL);
+    const [label, setLabel] = useState(initial?.labels[0] ?? "");
     const draft = {
         repo: repo.trim(),
         filedBy: filedBy.trim() || null,
@@ -193,7 +192,14 @@ function SetupView({ initial, onSave }) {
 function RoutineView({ config, editable, onEdit, onDone }) {
     const [copied, setCopied] = useState(false);
     const prompt = renderRoutinePrompt(config);
-    const labels = [...config.labels.slice(0, 1), CLAIM_LABEL, PARKED_LABEL];
+    const label = config.labels[0];
+    const errors = configErrors(config);
+    // An unscoped prompt would fix strangers' issues.
+    if (errors.length > 0) {
+        return (_jsxs(_Fragment, { children: [_jsx("ul", { style: styles.errors, children: errors.map((err) => _jsx("li", { children: err }, err)) }), _jsxs("div", { style: styles.footer, children: [editable
+                            ? _jsx("button", { type: "button", style: styles.linkButton, onClick: onEdit, children: "Edit rules" })
+                            : _jsx("span", { style: styles.hint, children: "Rules come from props." }), _jsx("button", { type: "button", style: styles.primary, onClick: onDone, children: "Done" })] })] }));
+    }
     const copy = async () => {
         try {
             await navigator.clipboard.writeText(prompt);
@@ -203,7 +209,7 @@ function RoutineView({ config, editable, onEdit, onDone }) {
             setCopied(false);
         }
     };
-    return (_jsxs(_Fragment, { children: [_jsxs("ol", { style: styles.steps, children: [_jsxs("li", { children: ["Create labels ", labels.map((l, i) => _jsxs("span", { children: [i > 0 && ", ", _jsx("code", { children: l })] }, l)), " in", " ", _jsx("a", { href: `https://github.com/${config.repo}/labels`, target: "_blank", rel: "noreferrer", children: config.repo }), "."] }), _jsxs("li", { children: ["In ", _jsx("a", { href: "https://claude.ai/code", target: "_blank", rel: "noreferrer", children: "Claude Code" }), ", create a routine on ", _jsx("code", { children: config.repo }), ", paste the prompt below, and trigger it on the GitHub event", " ", _jsx("b", { children: "issue opened" }), "."] })] }), _jsx("textarea", { style: { ...styles.textarea, fontFamily: "monospace", fontSize: 11 }, value: prompt, readOnly: true, rows: 10 }), _jsxs("div", { style: styles.footer, children: [editable
+    return (_jsxs(_Fragment, { children: [_jsxs("ol", { style: styles.steps, children: [label && (_jsxs("li", { children: ["Create the label ", _jsx("code", { children: label }), " in", " ", _jsx("a", { href: `https://github.com/${config.repo}/labels`, target: "_blank", rel: "noreferrer", children: config.repo }), ". GitHub drops a missing label from the issue link."] })), _jsxs("li", { children: ["In ", _jsx("a", { href: "https://claude.ai/code", target: "_blank", rel: "noreferrer", children: "Claude Code" }), ", create a routine on ", _jsx("code", { children: config.repo }), ", paste the prompt below, and trigger it on the GitHub event", " ", _jsx("b", { children: "issue opened" }), "."] })] }), _jsx("textarea", { style: { ...styles.textarea, fontFamily: "monospace", fontSize: 11 }, value: prompt, readOnly: true, rows: 10 }), _jsxs("div", { style: styles.footer, children: [editable
                         ? _jsx("button", { type: "button", style: styles.linkButton, onClick: onEdit, children: "Edit rules" })
                         : _jsx("span", { style: styles.hint, children: "Rules come from props." }), _jsxs("div", { style: styles.actions, children: [_jsx("button", { type: "button", style: styles.secondary, onClick: () => void copy(), children: copied ? "Copied ✓" : "Copy prompt" }), _jsx("button", { type: "button", style: styles.primary, onClick: onDone, children: "Done" })] })] })] }));
 }

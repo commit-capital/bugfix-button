@@ -94,6 +94,8 @@ describe("BugfixButton", () => {
 
     const prompt = screen.getByDisplayValue(/Fix issues filed through the Feedback button on acme\/app/);
     expect((prompt as HTMLTextAreaElement).value).toContain("author:dev");
+    expect((prompt as HTMLTextAreaElement).value).not.toContain(" label:");
+    expect(screen.queryByText(/Create the label/)).toBeNull();
 
     fireEvent.click(screen.getByText("Done"));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "Crash" } });
@@ -112,6 +114,14 @@ describe("BugfixButton", () => {
     render(<BugfixButton />);
     fireEvent.click(screen.getByText("🐞 Feedback"));
     expect(screen.getByText("Open Issue →")).toBeTruthy();
+  });
+
+  it("shows no routine prompt for props without a rule", () => {
+    render(<BugfixButton repo="acme/app" />);
+    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("⚙ acme/app"));
+    expect(screen.queryByText("Copy prompt")).toBeNull();
+    expect(screen.getByText(/Set a filer or an assignee/)).toBeTruthy();
   });
 
   it("blocks saving rules that match anyone", () => {
