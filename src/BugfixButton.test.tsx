@@ -116,6 +116,14 @@ describe("BugfixButton", () => {
     expect(screen.getByText("Open Issue →")).toBeTruthy();
   });
 
+  it("shows no routine prompt for props without a rule", () => {
+    render(<BugfixButton repo="acme/app" />);
+    fireEvent.click(screen.getByText("🐞 Feedback"));
+    fireEvent.click(screen.getByText("⚙ acme/app"));
+    expect(screen.queryByText("Copy prompt")).toBeNull();
+    expect(screen.getByText(/Set a filer or an assignee/)).toBeTruthy();
+  });
+
   it("blocks saving rules that match anyone", () => {
     render(<BugfixButton />);
     fireEvent.click(screen.getByText("🐞 Feedback"));

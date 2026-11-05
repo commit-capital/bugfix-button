@@ -193,6 +193,13 @@ function RoutineView({ config, editable, onEdit, onDone }) {
     const [copied, setCopied] = useState(false);
     const prompt = renderRoutinePrompt(config);
     const label = config.labels[0];
+    const errors = configErrors(config);
+    // An unscoped prompt would fix strangers' issues.
+    if (errors.length > 0) {
+        return (_jsxs(_Fragment, { children: [_jsx("ul", { style: styles.errors, children: errors.map((err) => _jsx("li", { children: err }, err)) }), _jsxs("div", { style: styles.footer, children: [editable
+                            ? _jsx("button", { type: "button", style: styles.linkButton, onClick: onEdit, children: "Edit rules" })
+                            : _jsx("span", { style: styles.hint, children: "Rules come from props." }), _jsx("button", { type: "button", style: styles.primary, onClick: onDone, children: "Done" })] })] }));
+    }
     const copy = async () => {
         try {
             await navigator.clipboard.writeText(prompt);

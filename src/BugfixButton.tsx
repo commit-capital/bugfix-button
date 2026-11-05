@@ -390,6 +390,22 @@ function RoutineView({ config, editable, onEdit, onDone }: RoutineViewProps) {
   const [copied, setCopied] = useState(false);
   const prompt = renderRoutinePrompt(config);
   const label = config.labels[0];
+  const errors = configErrors(config);
+
+  // An unscoped prompt would fix strangers' issues.
+  if (errors.length > 0) {
+    return (
+      <>
+        <ul style={styles.errors}>{errors.map((err) => <li key={err}>{err}</li>)}</ul>
+        <div style={styles.footer}>
+          {editable
+            ? <button type="button" style={styles.linkButton} onClick={onEdit}>Edit rules</button>
+            : <span style={styles.hint}>Rules come from props.</span>}
+          <button type="button" style={styles.primary} onClick={onDone}>Done</button>
+        </div>
+      </>
+    );
+  }
 
   const copy = async () => {
     try {

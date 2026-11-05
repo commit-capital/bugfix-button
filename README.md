@@ -8,10 +8,13 @@ drives it to a squash-merge.
 ## Install
 
 ```bash
-pnpm add github:commit-capital/bugfix-button#<commit-sha>
+pnpm add github:commit-capital/bugfix-button#v0.2.1
 ```
 
-Pin a commit. The built `dist/` is committed, so installs run no scripts.
+Each version on `main` is published as a `vX.Y.Z` release (see
+`.github/workflows/release.yml`). Pin one with `#vX.Y.Z`, or take updates
+within a major with `#semver:^0.2.0`. The built `dist/` is committed, so
+installs run no scripts.
 React 18+ is a peer dependency.
 
 ## Use
