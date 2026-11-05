@@ -91,7 +91,7 @@ export function BugfixButton(props: BugfixButtonProps) {
         onClick={() => setOpen(true)}
         title="Report a bug or request a feature"
       >
-        🐞 Feedback
+        🐞 File a Bug
       </button>
       {/* A sticky header's stacking context would cap the overlay. */}
       {open && createPortal(<FeedbackModal {...props} onClose={() => setOpen(false)} />, document.body)}
@@ -168,6 +168,14 @@ function MicIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z" />
     </svg>
   );
 }
@@ -310,7 +318,9 @@ function FileView({ config, appName, details, generate, onSettings, onClose }: F
         Copy a screenshot to the clipboard
       </label>
       <div style={styles.footer}>
-        <button type="button" style={styles.linkButton} onClick={onSettings}>⚙ {config.repo}</button>
+        <button type="button" style={styles.settings} onClick={onSettings} title="Repository and auto-fix settings">
+          <GearIcon /> {config.repo}
+        </button>
         <div style={styles.actions}>
           <button type="button" style={styles.secondary} onClick={onClose} disabled={busy}>Cancel</button>
           <button
@@ -365,6 +375,7 @@ function SetupView({ initial, onSave }: SetupViewProps) {
       <label style={styles.field}>
         <span>With label</span>
         <input style={styles.input} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="any" />
+        <span style={styles.hint}>The label must already exist in the repository.</span>
       </label>
       {errors.length > 0 && repo && (
         <ul style={styles.errors}>{errors.map((err) => <li key={err}>{err}</li>)}</ul>
@@ -389,7 +400,6 @@ interface RoutineViewProps {
 function RoutineView({ config, editable, onEdit, onDone }: RoutineViewProps) {
   const [copied, setCopied] = useState(false);
   const prompt = renderRoutinePrompt(config);
-  const label = config.labels[0];
   const errors = configErrors(config);
 
   // An unscoped prompt would fix strangers' issues.
@@ -418,21 +428,11 @@ function RoutineView({ config, editable, onEdit, onDone }: RoutineViewProps) {
 
   return (
     <>
-      <ol style={styles.steps}>
-        {label && (
-          <li>
-            Create the label <code>{label}</code> in{" "}
-            <a href={`https://github.com/${config.repo}/labels`} target="_blank" rel="noreferrer">{config.repo}</a>.
-            GitHub drops a missing label from the issue link.
-          </li>
-        )}
-        <li>
-          In <a href="https://claude.ai/code" target="_blank" rel="noreferrer">Claude Code</a>, create a routine
-          on <code>{config.repo}</code>, paste the prompt below, and trigger it on the GitHub event
-          {" "}<b>issue opened</b>.
-        </li>
-      </ol>
-      <textarea style={{ ...styles.textarea, fontFamily: "monospace", fontSize: 11 }} value={prompt} readOnly rows={10} />
+      <p style={styles.instructions}>
+        In any AI agent that can run a task on a GitHub event (Claude Code, Codex, …), create a task
+        for <code>{config.repo}</code> that runs on <b>issue opened</b>, with this prompt:
+      </p>
+      <textarea style={{ ...styles.textarea, fontFamily: "monospace", fontSize: 11 }} value={prompt} readOnly rows={10} wrap="off" />
       <div style={styles.footer}>
         {editable
           ? <button type="button" style={styles.linkButton} onClick={onEdit}>Edit rules</button>

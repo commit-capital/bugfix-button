@@ -31,7 +31,7 @@ export function renderRoutinePrompt(config) {
         `  - no label named "${CLAIM_LABEL}" or "${PARKED_LABEL}" is present`,
         `  - the "pull_request" field is absent (it is an issue, not a PR)`,
     ].filter(Boolean).join("\n");
-    return `Fix issues filed through the Feedback button on ${config.repo}, open a PR,
+    return `Fix issues filed through the File a Bug button on ${config.repo}, open a PR,
 and drive it to a squash-merge.
 
 Two rules are non-negotiable: the trust rules in STEP 0, and never merging a

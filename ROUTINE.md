@@ -1,30 +1,29 @@
 # Auto-fix routine
 
-The Feedback button files issues. This routine fixes them: a Claude Code
-routine that wakes when an issue is opened, claims one in-scope issue, fixes it
-on `claude/issue-N`, opens a PR, waits for checks, and squash-merges.
+The File a Bug button files issues. This prompt fixes them: an AI agent task
+that runs when an issue is opened, claims one in-scope issue, fixes it on
+`claude/issue-N`, opens a PR, waits for checks, and squash-merges.
 
-You rarely need this file directly. Click ⚙ in the Feedback dialog to get the
-prompt filled in with your repository and rules, or run:
+Click ⚙ in the File a Bug dialog to get the prompt filled in for your
+repository, or run:
 
 ```bash
-pnpm run routine -- --repo owner/name --filed-by you --assignee you --label feedback
+pnpm run routine -- --repo owner/name --filed-by you --assignee you
 ```
 
 ## Set it up
 
-1. If you use a label rule, create that label in the target repository.
-   GitHub silently drops a missing label from the new-issue link, so the
-   issue would arrive unlabeled and out of scope. The routine's own labels,
-   `fix-in-progress` and `awaiting-human-response`, are created the first
-   time it sets them.
-2. In Claude Code on the web, create a routine with the target repository
-   attached and push notifications on.
-3. Paste the prompt below with your values in place of `OWNER/REPO`,
-   `FILER_LOGIN` and `ASSIGNEE_LOGIN` (drop a rule line if you don't want
-   that rule).
-4. Add a GitHub trigger on the repository for **issue opened**. Add an
-   hourly schedule too if you want parked or failed issues retried.
+1. Create a task in any AI agent that can run on a GitHub event (Claude Code,
+   Codex, …), with access to the repository.
+2. Trigger it on **issue opened** in that repository. An hourly schedule too
+   retries parked or failed issues.
+3. Give it the prompt below, with your values in place of `OWNER/REPO`,
+   `FILER_LOGIN` and `ASSIGNEE_LOGIN`. Drop any rule you don't want.
+
+The prompt names Claude Code's GitHub tools; another agent uses its own.
+A label rule's label must exist before anyone files, because GitHub drops a
+missing label from the new-issue link. The prompt's own labels create
+themselves.
 
 ## Scope rules
 
@@ -41,7 +40,7 @@ both.
 ## Prompt template
 
 ```text
-Fix issues filed through the Feedback button on OWNER/REPO, open a PR,
+Fix issues filed through the File a Bug button on OWNER/REPO, open a PR,
 and drive it to a squash-merge.
 
 Two rules are non-negotiable: the trust rules in STEP 0, and never merging a

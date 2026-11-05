@@ -160,6 +160,17 @@ export const styles: Record<string, CSSProperties> = {
     color: accent,
     cursor: "pointer",
   },
+  settings: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    background: "none",
+    border: "none",
+    padding: 0,
+    font: `13px ${font}`,
+    color: accent,
+    cursor: "pointer",
+  },
   hint: {
     margin: 0,
     fontSize: 12,
@@ -171,9 +182,8 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: 12,
     color: danger,
   },
-  steps: {
+  instructions: {
     margin: 0,
-    paddingLeft: 18,
     fontSize: 13,
     lineHeight: 1.5,
   },
