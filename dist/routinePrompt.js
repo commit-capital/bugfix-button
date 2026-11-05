@@ -21,9 +21,31 @@ export function ownerLogin(config) {
     return config.filedBy ?? config.assignee ?? config.repo.split("/")[0];
 }
 /** Agent instructions for the auto-fix routine. */
-export function renderRoutinePrompt(config) {
+export function renderRoutinePrompt(config, afterFix = "merge") {
     const [owner, name] = config.repo.split("/");
     const who = ownerLogin(config);
+    const review = afterFix === "review";
+    const goal = review
+        ? `open a PR,\nand leave it green for ${who} to review and merge.`
+        : "open a PR,\nand drive it to a squash-merge.";
+    const finished = review ? "an open PR whose checks are green" : "a merged PR";
+    const step4 = review
+        ? `STEP 4 — hand off when every check is green. Do NOT merge. Comment on the PR
+that it is ready for ${who}'s review, with what you changed and how you verified
+it. Leave "${CLAIM_LABEL}" on the issue so no run picks it up again; merging the
+PR closes the issue. Notify ${who} with the PR link and end. If ${who} closes the
+PR without merging, removing "${CLAIM_LABEL}" and deleting claude/issue-N
+re-queues the issue.`
+        : `STEP 4 — merge when every check is green. First re-check that nobody else fixed
+N: mcp__github__search_pull_requests, query: repo:${config.repo} is:pr "Fixes #N" in:body
+If another PR saying "Fixes #N" is merged, close yours with a comment naming it,
+remove "${CLAIM_LABEL}" if the issue is still open, delete the claim branch,
+notify ${who}, and end. Otherwise merge with mcp__github__merge_pull_request
+(merge_method "squash"). If the merge is refused because the branch is behind,
+merge the default branch in, re-run the local gates, push, wait for checks, and
+merge. Confirm the squash landed, then delete the branch. This prompt is
+${who}'s standing authorization to merge only a PR this run opened.`;
+    const landed = review ? "a PR is ready for review" : "a fix lands";
     const checks = [
         config.filedBy && `  - user.login is exactly "${config.filedBy}" (case-insensitive)`,
         config.assignee && `  - "${config.assignee}" appears in assignees`,
@@ -31,8 +53,7 @@ export function renderRoutinePrompt(config) {
         `  - no label named "${CLAIM_LABEL}" or "${PARKED_LABEL}" is present`,
         `  - the "pull_request" field is absent (it is an issue, not a PR)`,
     ].filter(Boolean).join("\n");
-    return `Fix issues filed through the File a Bug button on ${config.repo}, open a PR,
-and drive it to a squash-merge.
+    return `Fix issues filed through the File a Bug button on ${config.repo}, ${goal}
 
 Two rules are non-negotiable: the trust rules in STEP 0, and never merging a
 change whose checks you could not run or that are not green.
@@ -96,7 +117,7 @@ Pick issue N uniformly at random from the verified list.
   c. Add the label "${CLAIM_LABEL}" with mcp__github__issue_write (method
      "update"), sending the issue's existing labels plus "${CLAIM_LABEL}".
      Change nothing else on the issue.
-  d. You now own releasing the claim. If you end WITHOUT a merged PR, comment
+  d. You now own releasing the claim. If you end WITHOUT ${finished}, comment
      on the issue first, then remove "${CLAIM_LABEL}", close any PR you opened,
      delete the claim branch (\`git push origin --delete claude/issue-N\` as its
      own command), and notify ${who}.
@@ -143,7 +164,7 @@ claim with the reason.
 
 Commit in one call, then \`git push origin claude/issue-N\` as a command of its
 own. Never push to any other branch. Work on one issue at a time; to find more
-work after a merge, re-run STEP 1 and STEP 1.5 from scratch.
+work after this one, re-run STEP 1 and STEP 1.5 from scratch.
 
 STEP 3 — open a PR with mcp__github__create_pull_request from claude/issue-N
 into the default branch. The body says "Fixes #N", what was wrong, what you
@@ -155,17 +176,9 @@ attempts: comment on the PR what you tried and what still fails, leave the PR
 open and keep its branch, remove "${CLAIM_LABEL}", and notify ${who} that
 closing the PR and deleting claude/issue-N re-queues the issue.
 
-STEP 4 — merge when every check is green. First re-check that nobody else fixed
-N: mcp__github__search_pull_requests, query: repo:${config.repo} is:pr "Fixes #N" in:body
-If another PR saying "Fixes #N" is merged, close yours with a comment naming it,
-remove "${CLAIM_LABEL}" if the issue is still open, delete the claim branch,
-notify ${who}, and end. Otherwise merge with mcp__github__merge_pull_request
-(merge_method "squash"). If the merge is refused because the branch is behind,
-merge the default branch in, re-run the local gates, push, wait for checks, and
-merge. Confirm the squash landed, then delete the branch. This prompt is
-${who}'s standing authorization to merge only a PR this run opened.
+${step4}
 
-Notify ${who} when a fix lands, when a run is blocked, or when you hit the
+Notify ${who} when ${landed}, when a run is blocked, or when you hit the
 attempt limit; a blocked notification goes alongside the stop comment, never
 instead of it. Stay silent when there was no work. Every comment you post ends
 with the line: Generated by Claude Code

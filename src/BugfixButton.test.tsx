@@ -124,6 +124,33 @@ describe("BugfixButton", () => {
     expect(screen.getByText(/Set a filer or an assignee/)).toBeTruthy();
   });
 
+  it("lets each person pick their own routine rules", () => {
+    render(<BugfixButton repo="acme/app" filedBy="dev" assignee="dev" />);
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
+    fireEvent.click(screen.getByTitle("Repository and auto-fix settings"));
+    const prompt = () => (screen.getByDisplayValue(/Fix issues filed through/) as HTMLTextAreaElement).value;
+    expect(prompt()).toContain("mcp__github__merge_pull_request");
+
+    fireEvent.click(screen.getByLabelText("Open a PR for my review"));
+    fireEvent.change(screen.getAllByDisplayValue("dev")[0], { target: { value: "andy" } });
+    expect(prompt()).toContain("Do NOT merge");
+    expect(prompt()).toContain("author:andy");
+    cleanup();
+
+    render(<BugfixButton repo="acme/app" filedBy="dev" assignee="dev" />);
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
+    fireEvent.click(screen.getByTitle("Repository and auto-fix settings"));
+    expect(prompt()).toContain("Do NOT merge");
+    expect(prompt()).toContain("author:andy");
+  });
+
+  it("points to the setup command when the repo wasn't inspected", () => {
+    render(<BugfixButton repo="acme/app" assignee="dev" />);
+    fireEvent.click(screen.getByText("🐞 File a Bug"));
+    fireEvent.click(screen.getByTitle("Repository and auto-fix settings"));
+    expect(screen.getByText(/npx -y github:commit-capital\/bugfix-button setup/)).toBeTruthy();
+  });
+
   it("blocks saving rules that match anyone", () => {
     render(<BugfixButton />);
     fireEvent.click(screen.getByText("🐞 File a Bug"));

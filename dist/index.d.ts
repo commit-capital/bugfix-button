@@ -6,3 +6,6 @@ export type { FeedbackConfig } from "./config.js";
 export { buildIssueUrl, issueTitle } from "./issueUrl.js";
 export type { FilingContext, IssueDraft } from "./issueUrl.js";
 export { CLAIM_LABEL, PARKED_LABEL, TEMPLATE_CONFIG, renderRoutinePrompt, scopeQuery } from "./routinePrompt.js";
+export type { AfterFix } from "./routinePrompt.js";
+export { renderSetupKit, SETUP_COMMAND } from "./setupKit.js";
+export type { RepoSetup } from "./setupKit.js";

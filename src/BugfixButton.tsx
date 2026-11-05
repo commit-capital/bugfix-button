@@ -6,12 +6,16 @@ import type { FeedbackConfig } from "./config.js";
 import { buildIssueUrl, issueTitle } from "./issueUrl.js";
 import type { IssueDraft } from "./issueUrl.js";
 import { renderRoutinePrompt } from "./routinePrompt.js";
+import type { AfterFix } from "./routinePrompt.js";
 import { copyPageScreenshot, SCREENSHOT_SKIP_ATTR } from "./screenshot.js";
+import { renderSetupKit, SETUP_COMMAND } from "./setupKit.js";
+import type { RepoSetup } from "./setupKit.js";
 import { useSpeechInput } from "./speech.js";
 import { styles } from "./styles.js";
 
 // Injected by the Vite plugin.
 declare const __BUGFIX_BUTTON_REPO__: string | null | undefined;
+declare const __BUGFIX_BUTTON_SETUP__: RepoSetup | null | undefined;
 
 const DRAFT_KEY = "bugfix-button:draft";
 const MIC_KEY = "bugfix-button:mic";
@@ -397,54 +401,124 @@ interface RoutineViewProps {
   onDone: () => void;
 }
 
-function RoutineView({ config, editable, onEdit, onDone }: RoutineViewProps) {
-  const [copied, setCopied] = useState(false);
-  const prompt = renderRoutinePrompt(config);
-  const errors = configErrors(config);
+const ROUTINE_KEY = "bugfix-button:routine";
 
-  // An unscoped prompt would fix strangers' issues.
-  if (errors.length > 0) {
-    return (
-      <>
-        <ul style={styles.errors}>{errors.map((err) => <li key={err}>{err}</li>)}</ul>
-        <div style={styles.footer}>
-          {editable
-            ? <button type="button" style={styles.linkButton} onClick={onEdit}>Edit rules</button>
-            : <span style={styles.hint}>Rules come from props.</span>}
-          <button type="button" style={styles.primary} onClick={onDone}>Done</button>
-        </div>
-      </>
-    );
+interface RoutineRules {
+  filedBy: string;
+  assignee: string;
+  afterFix: AfterFix;
+}
+
+function loadRules(config: FeedbackConfig): RoutineRules {
+  const defaults: RoutineRules = { filedBy: config.filedBy ?? "", assignee: config.assignee ?? "", afterFix: "merge" };
+  const raw = readPref(ROUTINE_KEY);
+  if (!raw) return defaults;
+  try {
+    const saved: unknown = JSON.parse(raw);
+    if (typeof saved !== "object" || saved === null) return defaults;
+    const v = saved as Record<string, unknown>;
+    if (v.repo !== config.repo || typeof v.filedBy !== "string" || typeof v.assignee !== "string") return defaults;
+    return { filedBy: v.filedBy, assignee: v.assignee, afterFix: v.afterFix === "review" ? "review" : "merge" };
+  } catch {
+    return defaults;
   }
+}
 
+function detectedSetup(): RepoSetup | null {
+  return typeof __BUGFIX_BUTTON_SETUP__ === "object" ? __BUGFIX_BUTTON_SETUP__ ?? null : null;
+}
+
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(prompt);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
     } catch {
       setCopied(false);
     }
   };
+  return (
+    <button type="button" style={styles.secondary} onClick={() => void copy()}>
+      {copied ? "Copied ✓" : label}
+    </button>
+  );
+}
+
+function RoutineView({ config, editable, onEdit, onDone }: RoutineViewProps) {
+  const [rules, setRules] = useState<RoutineRules>(() => loadRules(config));
+  const setup = detectedSetup();
+
+  const update = (next: Partial<RoutineRules>) => {
+    const merged = { ...rules, ...next };
+    setRules(merged);
+    writePref(ROUTINE_KEY, JSON.stringify({ repo: config.repo, ...merged }));
+  };
+
+  const routineConfig: FeedbackConfig = {
+    ...config,
+    filedBy: rules.filedBy.trim() || null,
+    assignee: rules.assignee.trim() || null,
+  };
+  // An unscoped prompt would fix strangers' issues.
+  const errors = configErrors(routineConfig);
+  const prompt = renderRoutinePrompt(routineConfig, rules.afterFix);
 
   return (
     <>
       <p style={styles.instructions}>
-        In any AI agent that can run a task on a GitHub event (Claude Code, Codex, …), create a task
-        for <code>{config.repo}</code> that runs on <b>issue opened</b>, with this prompt:
+        Your auto-fix routine for <code>{config.repo}</code>. Each person sets up their own.
       </p>
-      <p style={styles.hint}>
-        If its network is restricted, allow <code>codeload.github.com</code> (installing this
-        library) and <code>private-user-images.githubusercontent.com</code> (issue screenshots).
-      </p>
-      <textarea style={{ ...styles.textarea, fontFamily: "monospace", fontSize: 11 }} value={prompt} readOnly rows={10} wrap="off" />
+      <label style={styles.field}>
+        <span>Fix issues filed by (GitHub login)</span>
+        <input style={styles.input} value={rules.filedBy} onChange={(e) => update({ filedBy: e.target.value })} placeholder="anyone" />
+      </label>
+      <label style={styles.field}>
+        <span>and assigned to</span>
+        <input style={styles.input} value={rules.assignee} onChange={(e) => update({ assignee: e.target.value })} placeholder="anyone" />
+      </label>
+      <div style={styles.field} role="radiogroup" aria-label="When a fix passes its checks">
+        <span>When a fix passes its checks</span>
+        <label style={styles.option}>
+          <input type="radio" checked={rules.afterFix === "merge"} onChange={() => update({ afterFix: "merge" })} />
+          Merge it
+        </label>
+        <label style={styles.option}>
+          <input type="radio" checked={rules.afterFix === "review"} onChange={() => update({ afterFix: "review" })} />
+          Open a PR for my review
+        </label>
+      </div>
+      {errors.length > 0 ? (
+        <ul style={styles.errors}>{errors.map((err) => <li key={err}>{err}</li>)}</ul>
+      ) : (
+        <>
+          <p style={styles.sectionTitle}>1. Prepare the agent's environment</p>
+          {setup ? (
+            <>
+              <p style={styles.hint}>Detected from this repository:</p>
+              <textarea style={styles.code} value={renderSetupKit(setup)} readOnly rows={6} wrap="off" />
+              <div style={styles.actions}><CopyButton text={renderSetupKit(setup)} label="Copy setup" /></div>
+            </>
+          ) : (
+            <p style={styles.hint}>
+              Run <code>{SETUP_COMMAND}</code> in your repository. It prints the setup script,
+              the domains to allow, and the checks the agent must be able to run.
+            </p>
+          )}
+          <p style={styles.sectionTitle}>2. Create the task</p>
+          <p style={styles.instructions}>
+            In any AI agent that can run a task on a GitHub event (Claude Code, Codex, …), create a task
+            for <code>{config.repo}</code> that runs on <b>issue opened</b>, with this prompt:
+          </p>
+          <textarea style={styles.code} value={prompt} readOnly rows={8} wrap="off" />
+        </>
+      )}
       <div style={styles.footer}>
         {editable
-          ? <button type="button" style={styles.linkButton} onClick={onEdit}>Edit rules</button>
-          : <span style={styles.hint}>Rules come from props.</span>}
+          ? <button type="button" style={styles.linkButton} onClick={onEdit}>Edit where issues go</button>
+          : <span />}
         <div style={styles.actions}>
-          <button type="button" style={styles.secondary} onClick={() => void copy()}>
-            {copied ? "Copied ✓" : "Copy prompt"}
-          </button>
+          {errors.length === 0 && <CopyButton text={prompt} label="Copy prompt" />}
           <button type="button" style={styles.primary} onClick={onDone}>Done</button>
         </div>
       </div>

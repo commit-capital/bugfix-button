@@ -2,26 +2,30 @@
 
 The File a Bug button files issues. This prompt fixes them: an AI agent task
 that runs when an issue is opened, claims one in-scope issue, fixes it on
-`claude/issue-N`, opens a PR, waits for checks, and squash-merges.
+`claude/issue-N`, opens a PR, waits for checks, and either squash-merges it
+or leaves it for review.
 
 Click ⚙ in the File a Bug dialog to get the prompt filled in for your
-repository, or run:
+repository and your rules, or run:
 
 ```bash
-pnpm run routine -- --repo owner/name --filed-by you --assignee you
+npx -y github:commit-capital/bugfix-button routine --repo owner/name --filed-by you --assignee you [--review]
 ```
 
 ## Set it up
 
-1. Create a task in any AI agent that can run on a GitHub event (Claude Code,
+1. In your repository, run `npx -y github:commit-capital/bugfix-button setup`.
+   It prints the setup script, the domains to allow, and the checks the agent
+   must run. Put them in the agent's environment settings.
+2. Create a task in any AI agent that can run on a GitHub event (Claude Code,
    Codex, …), with access to the repository.
-2. Trigger it on **issue opened** in that repository. An hourly schedule too
+3. Trigger it on **issue opened** in that repository. An hourly schedule too
    retries parked or failed issues.
-3. Give it the prompt below, with your values in place of `OWNER/REPO`,
+4. Give it the prompt below, with your values in place of `OWNER/REPO`,
    `FILER_LOGIN` and `ASSIGNEE_LOGIN`. Drop any rule you don't want.
-4. If its network is restricted, allow `codeload.github.com` (pnpm downloads
-   this library from there) and `private-user-images.githubusercontent.com`
-   (the screenshot step downloads issue images from there).
+
+The template merges fixes. With `--review` (or "Open a PR for my review" in the
+⚙ view), STEP 4 stops at a green PR and notifies you instead.
 
 The prompt names Claude Code's GitHub tools; another agent uses its own.
 A label rule's label must exist before anyone files, because GitHub drops a
@@ -159,7 +163,7 @@ claim with the reason.
 
 Commit in one call, then `git push origin claude/issue-N` as a command of its
 own. Never push to any other branch. Work on one issue at a time; to find more
-work after a merge, re-run STEP 1 and STEP 1.5 from scratch.
+work after this one, re-run STEP 1 and STEP 1.5 from scratch.
 
 STEP 3 — open a PR with mcp__github__create_pull_request from claude/issue-N
 into the default branch. The body says "Fixes #N", what was wrong, what you
