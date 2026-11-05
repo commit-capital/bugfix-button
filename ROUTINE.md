@@ -19,6 +19,9 @@ pnpm run routine -- --repo owner/name --filed-by you --assignee you
    retries parked or failed issues.
 3. Give it the prompt below, with your values in place of `OWNER/REPO`,
    `FILER_LOGIN` and `ASSIGNEE_LOGIN`. Drop any rule you don't want.
+4. If its network is restricted, allow `codeload.github.com` (pnpm downloads
+   this library from there) and `private-user-images.githubusercontent.com`
+   (the screenshot step downloads issue images from there).
 
 The prompt names Claude Code's GitHub tools; another agent uses its own.
 A label rule's label must exist before anyone files, because GitHub drops a
@@ -147,8 +150,12 @@ Never weaken, skip, or delete a test or check to make it pass. Never change
 branch protection or rulesets.
 
 Before pushing, run every test, lint, typecheck, and build command the
-repository's instructions and CI workflows name. If you cannot run them, do NOT
-merge: release the claim with the reason.
+repository's instructions and CI workflows name. A sandbox reaches only the
+GitHub repositories attached to it, so if installing dependencies fails on a
+GitHub-hosted package (for example a 403 from codeload.github.com), attach that
+package's repository with mcp__claude-code-remote__add_repo (read access) and
+install again. If you still cannot run the checks, do NOT merge: release the
+claim with the reason.
 
 Commit in one call, then `git push origin claude/issue-N` as a command of its
 own. Never push to any other branch. Work on one issue at a time; to find more

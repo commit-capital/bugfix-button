@@ -21,6 +21,9 @@ pnpm run routine -- --repo owner/name --filed-by you --assignee you
    retries parked or failed issues.
 3. Give it the prompt below, with your values in place of \`OWNER/REPO\`,
    \`FILER_LOGIN\` and \`ASSIGNEE_LOGIN\`. Drop any rule you don't want.
+4. If its network is restricted, allow \`codeload.github.com\` (pnpm downloads
+   this library from there) and \`private-user-images.githubusercontent.com\`
+   (the screenshot step downloads issue images from there).
 
 The prompt names Claude Code's GitHub tools; another agent uses its own.
 A label rule's label must exist before anyone files, because GitHub drops a

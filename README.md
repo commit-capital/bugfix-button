@@ -10,7 +10,7 @@ prefilled GitHub issue to file in one click. An AI agent task
 pnpm add github:commit-capital/bugfix-button
 ```
 
-Add `#v0.2.2` to the end to pin a release. React 18+ is required.
+Add `#v0.2.3` to the end to pin a release. React 18+ is required.
 
 ## Use
 
@@ -65,7 +65,10 @@ export default defineConfig({ plugins: [react(), bugfixButton()] });
 
 Create a task in any AI agent that can run on a GitHub event (Claude Code,
 Codex, …). Trigger it on **issue opened** in your repository, and give it the
-prompt from the ⚙ view. [ROUTINE.md](ROUTINE.md) explains how it works.
+prompt from the ⚙ view. If the agent's network is restricted, allow
+`codeload.github.com` (pnpm downloads this library from there) and
+`private-user-images.githubusercontent.com` (issue screenshots).
+[ROUTINE.md](ROUTINE.md) explains how it works.
 
 ## Develop
 

@@ -432,6 +432,10 @@ function RoutineView({ config, editable, onEdit, onDone }: RoutineViewProps) {
         In any AI agent that can run a task on a GitHub event (Claude Code, Codex, …), create a task
         for <code>{config.repo}</code> that runs on <b>issue opened</b>, with this prompt:
       </p>
+      <p style={styles.hint}>
+        If its network is restricted, allow <code>codeload.github.com</code> (installing this
+        library) and <code>private-user-images.githubusercontent.com</code> (issue screenshots).
+      </p>
       <textarea style={{ ...styles.textarea, fontFamily: "monospace", fontSize: 11 }} value={prompt} readOnly rows={10} wrap="off" />
       <div style={styles.footer}>
         {editable
