@@ -59,6 +59,8 @@ export const styles: Record<string, CSSProperties> = {
     borderRadius: 10,
     boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
     textAlign: "left",
+    maxHeight: "calc(88vh - 32px)",
+    overflowY: "auto",
   },
   modalHeader: {
     display: "flex",
@@ -181,6 +183,22 @@ export const styles: Record<string, CSSProperties> = {
     paddingLeft: 18,
     fontSize: 12,
     color: danger,
+  },
+  sectionTitle: {
+    margin: "4px 0 0",
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  code: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "8px 10px",
+    font: "11px ui-monospace, SFMono-Regular, Menlo, monospace",
+    color: fg,
+    background: field,
+    border: `1px solid ${border}`,
+    borderRadius: 6,
+    resize: "vertical",
   },
   instructions: {
     margin: 0,

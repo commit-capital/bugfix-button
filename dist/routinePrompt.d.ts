@@ -6,7 +6,9 @@ export declare const PARKED_LABEL = "awaiting-human-response";
 export declare function scopeQuery(config: FeedbackConfig): string;
 /** Login whose comments may steer a fix. */
 export declare function ownerLogin(config: FeedbackConfig): string;
+/** What the routine does with a fix whose checks pass. */
+export type AfterFix = "merge" | "review";
 /** Agent instructions for the auto-fix routine. */
-export declare function renderRoutinePrompt(config: FeedbackConfig): string;
+export declare function renderRoutinePrompt(config: FeedbackConfig, afterFix?: AfterFix): string;
 /** Placeholder rules for the generic template. */
 export declare const TEMPLATE_CONFIG: FeedbackConfig;

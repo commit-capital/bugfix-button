@@ -88,6 +88,15 @@ describe("routine prompt", () => {
     expect(prompt).toContain("repos/commit-capital/startupSourcer/issues/");
   });
 
+  it("merges by default and only hands off in review mode", () => {
+    const merge = renderRoutinePrompt(config);
+    expect(merge).toContain("mcp__github__merge_pull_request");
+    const review = renderRoutinePrompt(config, "review");
+    expect(review).toContain("Do NOT merge");
+    expect(review).not.toContain("mcp__github__merge_pull_request");
+    expect(review).toContain("leave it green for brandonburr to review");
+  });
+
   it("matches the committed ROUTINE.md", () => {
     const committed = readFileSync("ROUTINE.md", "utf8");
     expect(committed).toBe(routineDoc(renderRoutinePrompt(TEMPLATE_CONFIG)));

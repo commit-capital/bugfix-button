@@ -5,6 +5,7 @@ import { configErrors, loadSavedConfig, saveConfig } from "./config.js";
 import { buildIssueUrl, issueTitle } from "./issueUrl.js";
 import { renderRoutinePrompt } from "./routinePrompt.js";
 import { copyPageScreenshot, SCREENSHOT_SKIP_ATTR } from "./screenshot.js";
+import { renderSetupKit, SETUP_COMMAND } from "./setupKit.js";
 import { useSpeechInput } from "./speech.js";
 import { styles } from "./styles.js";
 const DRAFT_KEY = "bugfix-button:draft";
@@ -192,26 +193,58 @@ function SetupView({ initial, onSave }) {
     const errors = configErrors(draft);
     return (_jsxs(_Fragment, { children: [_jsxs("label", { style: styles.field, children: [_jsx("span", { children: "File issues in" }), _jsx("input", { style: styles.input, value: repo, onChange: (e) => setRepo(e.target.value), placeholder: "owner/name", autoFocus: true })] }), _jsx("p", { style: styles.hint, children: "Auto-fix an issue only when it matches every rule below." }), _jsxs("label", { style: styles.field, children: [_jsx("span", { children: "Filed by (GitHub login)" }), _jsx("input", { style: styles.input, value: filedBy, onChange: (e) => setFiledBy(e.target.value), placeholder: "anyone" })] }), _jsxs("label", { style: styles.field, children: [_jsx("span", { children: "Assigned to" }), _jsx("input", { style: styles.input, value: assignee, onChange: (e) => setAssignee(e.target.value), placeholder: "anyone" })] }), _jsxs("label", { style: styles.field, children: [_jsx("span", { children: "With label" }), _jsx("input", { style: styles.input, value: label, onChange: (e) => setLabel(e.target.value), placeholder: "any" }), _jsx("span", { style: styles.hint, children: "The label must already exist in the repository." })] }), errors.length > 0 && repo && (_jsx("ul", { style: styles.errors, children: errors.map((err) => _jsx("li", { children: err }, err)) })), _jsxs("div", { style: styles.footer, children: [_jsx("span", {}), _jsx("button", { type: "button", style: styles.primary, disabled: errors.length > 0, onClick: () => onSave(draft), children: "Save \u2192" })] })] }));
 }
-function RoutineView({ config, editable, onEdit, onDone }) {
-    const [copied, setCopied] = useState(false);
-    const prompt = renderRoutinePrompt(config);
-    const errors = configErrors(config);
-    // An unscoped prompt would fix strangers' issues.
-    if (errors.length > 0) {
-        return (_jsxs(_Fragment, { children: [_jsx("ul", { style: styles.errors, children: errors.map((err) => _jsx("li", { children: err }, err)) }), _jsxs("div", { style: styles.footer, children: [editable
-                            ? _jsx("button", { type: "button", style: styles.linkButton, onClick: onEdit, children: "Edit rules" })
-                            : _jsx("span", { style: styles.hint, children: "Rules come from props." }), _jsx("button", { type: "button", style: styles.primary, onClick: onDone, children: "Done" })] })] }));
+const ROUTINE_KEY = "bugfix-button:routine";
+function loadRules(config) {
+    const defaults = { filedBy: config.filedBy ?? "", assignee: config.assignee ?? "", afterFix: "merge" };
+    const raw = readPref(ROUTINE_KEY);
+    if (!raw)
+        return defaults;
+    try {
+        const saved = JSON.parse(raw);
+        if (typeof saved !== "object" || saved === null)
+            return defaults;
+        const v = saved;
+        if (v.repo !== config.repo || typeof v.filedBy !== "string" || typeof v.assignee !== "string")
+            return defaults;
+        return { filedBy: v.filedBy, assignee: v.assignee, afterFix: v.afterFix === "review" ? "review" : "merge" };
     }
+    catch {
+        return defaults;
+    }
+}
+function detectedSetup() {
+    return typeof __BUGFIX_BUTTON_SETUP__ === "object" ? __BUGFIX_BUTTON_SETUP__ ?? null : null;
+}
+function CopyButton({ text, label }) {
+    const [copied, setCopied] = useState(false);
     const copy = async () => {
         try {
-            await navigator.clipboard.writeText(prompt);
+            await navigator.clipboard.writeText(text);
             setCopied(true);
         }
         catch {
             setCopied(false);
         }
     };
-    return (_jsxs(_Fragment, { children: [_jsxs("p", { style: styles.instructions, children: ["In any AI agent that can run a task on a GitHub event (Claude Code, Codex, \u2026), create a task for ", _jsx("code", { children: config.repo }), " that runs on ", _jsx("b", { children: "issue opened" }), ", with this prompt:"] }), _jsxs("p", { style: styles.hint, children: ["If its network is restricted, allow ", _jsx("code", { children: "codeload.github.com" }), " (installing this library) and ", _jsx("code", { children: "private-user-images.githubusercontent.com" }), " (issue screenshots)."] }), _jsx("textarea", { style: { ...styles.textarea, fontFamily: "monospace", fontSize: 11 }, value: prompt, readOnly: true, rows: 10, wrap: "off" }), _jsxs("div", { style: styles.footer, children: [editable
-                        ? _jsx("button", { type: "button", style: styles.linkButton, onClick: onEdit, children: "Edit rules" })
-                        : _jsx("span", { style: styles.hint, children: "Rules come from props." }), _jsxs("div", { style: styles.actions, children: [_jsx("button", { type: "button", style: styles.secondary, onClick: () => void copy(), children: copied ? "Copied ✓" : "Copy prompt" }), _jsx("button", { type: "button", style: styles.primary, onClick: onDone, children: "Done" })] })] })] }));
+    return (_jsx("button", { type: "button", style: styles.secondary, onClick: () => void copy(), children: copied ? "Copied ✓" : label }));
+}
+function RoutineView({ config, editable, onEdit, onDone }) {
+    const [rules, setRules] = useState(() => loadRules(config));
+    const setup = detectedSetup();
+    const update = (next) => {
+        const merged = { ...rules, ...next };
+        setRules(merged);
+        writePref(ROUTINE_KEY, JSON.stringify({ repo: config.repo, ...merged }));
+    };
+    const routineConfig = {
+        ...config,
+        filedBy: rules.filedBy.trim() || null,
+        assignee: rules.assignee.trim() || null,
+    };
+    // An unscoped prompt would fix strangers' issues.
+    const errors = configErrors(routineConfig);
+    const prompt = renderRoutinePrompt(routineConfig, rules.afterFix);
+    return (_jsxs(_Fragment, { children: [_jsxs("p", { style: styles.instructions, children: ["Your auto-fix routine for ", _jsx("code", { children: config.repo }), ". Each person sets up their own."] }), _jsxs("label", { style: styles.field, children: [_jsx("span", { children: "Fix issues filed by (GitHub login)" }), _jsx("input", { style: styles.input, value: rules.filedBy, onChange: (e) => update({ filedBy: e.target.value }), placeholder: "anyone" })] }), _jsxs("label", { style: styles.field, children: [_jsx("span", { children: "and assigned to" }), _jsx("input", { style: styles.input, value: rules.assignee, onChange: (e) => update({ assignee: e.target.value }), placeholder: "anyone" })] }), _jsxs("div", { style: styles.field, role: "radiogroup", "aria-label": "When a fix passes its checks", children: [_jsx("span", { children: "When a fix passes its checks" }), _jsxs("label", { style: styles.option, children: [_jsx("input", { type: "radio", checked: rules.afterFix === "merge", onChange: () => update({ afterFix: "merge" }) }), "Merge it"] }), _jsxs("label", { style: styles.option, children: [_jsx("input", { type: "radio", checked: rules.afterFix === "review", onChange: () => update({ afterFix: "review" }) }), "Open a PR for my review"] })] }), errors.length > 0 ? (_jsx("ul", { style: styles.errors, children: errors.map((err) => _jsx("li", { children: err }, err)) })) : (_jsxs(_Fragment, { children: [_jsx("p", { style: styles.sectionTitle, children: "1. Prepare the agent's environment" }), setup ? (_jsxs(_Fragment, { children: [_jsx("p", { style: styles.hint, children: "Detected from this repository:" }), _jsx("textarea", { style: styles.code, value: renderSetupKit(setup), readOnly: true, rows: 6, wrap: "off" }), _jsx("div", { style: styles.actions, children: _jsx(CopyButton, { text: renderSetupKit(setup), label: "Copy setup" }) })] })) : (_jsxs("p", { style: styles.hint, children: ["Run ", _jsx("code", { children: SETUP_COMMAND }), " in your repository. It prints the setup script, the domains to allow, and the checks the agent must be able to run."] })), _jsx("p", { style: styles.sectionTitle, children: "2. Create the task" }), _jsxs("p", { style: styles.instructions, children: ["In any AI agent that can run a task on a GitHub event (Claude Code, Codex, \u2026), create a task for ", _jsx("code", { children: config.repo }), " that runs on ", _jsx("b", { children: "issue opened" }), ", with this prompt:"] }), _jsx("textarea", { style: styles.code, value: prompt, readOnly: true, rows: 8, wrap: "off" })] })), _jsxs("div", { style: styles.footer, children: [editable
+                        ? _jsx("button", { type: "button", style: styles.linkButton, onClick: onEdit, children: "Edit where issues go" })
+                        : _jsx("span", {}), _jsxs("div", { style: styles.actions, children: [errors.length === 0 && _jsx(CopyButton, { text: prompt, label: "Copy prompt" }), _jsx("button", { type: "button", style: styles.primary, onClick: onDone, children: "Done" })] })] })] }));
 }

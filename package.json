@@ -1,6 +1,6 @@
 {
   "name": "@commit-capital/bugfix-button",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "A drop-in Feedback button that files GitHub issues, plus a Claude routine that fixes them.",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,9 @@
   },
   "type": "module",
   "packageManager": "pnpm@12.4.1",
+  "bin": {
+    "bugfix-button": "./dist/cli.js"
+  },
   "files": [
     "LICENSE",
     "dist",
@@ -22,6 +25,10 @@
     "./vite": {
       "types": "./dist/vite.d.ts",
       "import": "./dist/vite.js"
+    },
+    "./setup": {
+      "types": "./dist/setup.d.ts",
+      "import": "./dist/setup.js"
     }
   },
   "scripts": {

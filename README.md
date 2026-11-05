@@ -10,7 +10,7 @@ prefilled GitHub issue to file in one click. An AI agent task
 pnpm add github:commit-capital/bugfix-button
 ```
 
-Add `#v0.2.3` to the end to pin a release. React 18+ is required.
+Add `#v0.3.0` to the end to pin a release. React 18+ is required.
 
 ## Use
 
@@ -63,12 +63,28 @@ export default defineConfig({ plugins: [react(), bugfixButton()] });
 
 ## Auto-fix
 
-Create a task in any AI agent that can run on a GitHub event (Claude Code,
-Codex, …). Trigger it on **issue opened** in your repository, and give it the
-prompt from the ⚙ view. If the agent's network is restricted, allow
-`codeload.github.com` (pnpm downloads this library from there) and
-`private-user-images.githubusercontent.com` (issue screenshots).
-[ROUTINE.md](ROUTINE.md) explains how it works.
+Each person who wants their bugs fixed sets up their own agent task:
+
+1. **Prepare the environment.** In your repository, run:
+   ```bash
+   npx -y github:commit-capital/bugfix-button setup
+   ```
+   It reads the repository (pixi, uv, pnpm/yarn pins, GitHub-hosted
+   dependencies, pre-commit, CI workflows) and prints the setup script, the
+   domains to allow, and the checks the agent must be able to run. With the
+   Vite plugin, the ⚙ view shows the same thing during `vite dev`.
+2. **Pick your rules in the ⚙ view:** whose issues to fix (filed by, assigned
+   to), and whether a fix that passes its checks is merged or left as a PR for
+   your review. The view saves your choices in your browser and updates the
+   prompt.
+3. **Create the task** in any AI agent that can run on a GitHub event (Claude
+   Code, Codex, …). Trigger it on **issue opened**, and give it the prompt.
+
+Everyone's routines can run side by side: each takes only its own issues, and
+a claim branch stops two from fixing the same one. The CLI prints a prompt
+too: `npx -y github:commit-capital/bugfix-button routine --repo owner/name
+--filed-by you --assignee you [--review]`. [ROUTINE.md](ROUTINE.md) explains
+how the prompt works.
 
 ## Develop
 
